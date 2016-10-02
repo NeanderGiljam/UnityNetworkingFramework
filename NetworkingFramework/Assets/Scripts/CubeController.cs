@@ -1,37 +1,32 @@
 ﻿using UnityEngine;
 using System.Collections;
 
-public class CubeController : MonoBehaviour {
-
-	public ClientController clientController;
+public class CubeController : NetworkTransform {
 
 	private float speed = 5f;
 
-	private bool network = true;
+	private Vector3 pos;
 
-	void Update () {
-		transform.Translate(new Vector3(Input.GetAxis("Horizontal"), 0, Input.GetAxis("Vertical")) * Time.deltaTime * speed, Space.World);
+	private void Update() {
+		if (_client != null && _client._connected) {
+			if (_isMine) {
+				transform.Translate(new Vector3(Input.GetAxis("Horizontal"), 0, Input.GetAxis("Vertical")) * Time.deltaTime * speed, Space.World);
+				_client.Send(PacketHandler.Create(MessageType.Position, _client._networkClientID, _client._networkClientName, transform.position));
+			} else {
+				transform.position = Vector3.Lerp(transform.position, pos, Time.deltaTime * speed);
+			}
+		} 
+	}
 
-		if (network && clientController != null && clientController.client._connected) {
-			if (Input.GetKeyDown(KeyCode.G)) {
-				clientController.client.Send(PacketHandler.Create(MessageType.Position, transform.position));
+	public override void OnNetworkUpdate(PacketReader pr, int clientId) {
+		base.OnNetworkUpdate(pr, clientId);
+
+		if (!_isMine) {
+			if (clientId == _networkClientID) {
+				pos = PacketHandler.Read<Vector3>(pr, MessageType.Position);
+				Debug.Log("New Pos: " + pos);
 			}
 		}
-	}
-
-	private float timer = 0;
-	private void SendNetworkUpdate(Vector3 pos) {
-		timer += Time.deltaTime;
-
-		if (timer > 4f) {
-			clientController.client.Send(PacketHandler.Create(MessageType.Position, pos));
-			timer = 0;
-		}
-	}
-
-	[NetworkRemoteMethod]
-	public void DoDamage(float dmg = 0) {
-		Debug.Log("Got " + dmg + " damage.");
 	}
 
 }

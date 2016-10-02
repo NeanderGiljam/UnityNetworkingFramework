@@ -32,7 +32,7 @@ public class ClientController : MonoBehaviour {
 			GUI.Label(new Rect(10, 30, 80, 20), "Message:");
 			message = GUI.TextField(new Rect(10, 60, 120, 20), message);
 			if (GUI.Button(new Rect(10, 90, 120, 20), "Send Message") || Input.GetKeyDown(KeyCode.Return)) {
-				client.Send(PacketHandler.Create(MessageType.Text, message));
+				client.Send(PacketHandler.Create(MessageType.Text, client._networkClientID, client._networkClientName, message));
 				message = "";
 			}	
 		}

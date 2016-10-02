@@ -4,35 +4,52 @@ using System.IO;
 
 public static class PacketHandler {
 
-	public static byte[] Create(MessageType messageType) {
+	public static byte[] Create(MessageType messageType, int sourceClientID, string sourceClientName) {
 		PacketWriter pw = new PacketWriter();
 		pw.Write((ushort)messageType);
+		pw.Write((ushort)sourceClientID);
+		pw.Write(sourceClientName);
 
 		return pw.GetBytes();
 	}
-	public static byte[] Create(MessageType messageType, string text) {
+	public static byte[] Create(MessageType messageType, int sourceClientID, string sourceClientName, byte[] data) {
 		PacketWriter pw = new PacketWriter();
 		pw.Write((ushort)messageType);
+		pw.Write((ushort)sourceClientID);
+		pw.Write(sourceClientName);
+		pw.Write(data);
+
+		return pw.GetBytes();
+	}
+	public static byte[] Create(MessageType messageType, int sourceClientID, string sourceClientName, string text) {
+		PacketWriter pw = new PacketWriter();
+		pw.Write((ushort)messageType);
+		pw.Write((ushort)sourceClientID);
+		pw.Write(sourceClientName);
 		pw.Write(text);
 
 		return pw.GetBytes();
 	}
-	public static byte[] Create(MessageType messageType, Vector2 vector) {
+	public static byte[] Create(MessageType messageType, int sourceClientID, string sourceClientName, Vector2 vector) {
 		PacketWriter pw = new PacketWriter();
 		pw.Write((ushort)messageType);
+		pw.Write((ushort)sourceClientID);
+		pw.Write(sourceClientName);
 		pw.Write(vector);
 
 		return pw.GetBytes();
 	}
-	public static byte[] Create(MessageType messageType, Vector3 vector) {
+	public static byte[] Create(MessageType messageType, int sourceClientID, string sourceClientName, Vector3 vector) {
 		PacketWriter pw = new PacketWriter();
 		pw.Write((ushort)messageType);
+		pw.Write((ushort)sourceClientID);
+		pw.Write(sourceClientName);
 		pw.Write(vector);
 
 		return pw.GetBytes();
 	}
 
-	public static T Read<T>(PacketReader pr, MessageType messageType, byte[] data) {
+	public static T Read<T>(PacketReader pr, MessageType messageType) {
 		object o = null;
 		switch (messageType) {
 			case MessageType.Text:
