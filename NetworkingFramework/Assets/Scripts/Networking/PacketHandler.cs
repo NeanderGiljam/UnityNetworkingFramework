@@ -4,7 +4,7 @@ using System.IO;
 
 public static class PacketHandler {
 
-	public static byte[] Create(MessageType messageType, int sourceClientID, string sourceClientName) {
+	public static byte[] Create(MessageType messageType, int sourceClientID, string sourceClientName) { // TODO: Change params so that there is less data to be send.
 		PacketWriter pw = new PacketWriter();
 		pw.Write((ushort)messageType);
 		pw.Write((ushort)sourceClientID);

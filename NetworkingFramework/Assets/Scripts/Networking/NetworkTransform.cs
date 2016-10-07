@@ -1,5 +1,6 @@
 ﻿using System;
 using UnityEngine;
+using NetworkTCP;
 
 public class NetworkTransform : MonoBehaviour, INetworkTransform {
 

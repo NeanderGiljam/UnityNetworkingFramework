@@ -13,9 +13,9 @@ public class CubeController : NetworkTransform {
 				transform.Translate(new Vector3(Input.GetAxis("Horizontal"), 0, Input.GetAxis("Vertical")) * Time.deltaTime * speed, Space.World);
 				_client.Send(PacketHandler.Create(MessageType.Position, _client._networkClientID, _client._networkClientName, transform.position));
 			} else {
-				transform.position = Vector3.Lerp(transform.position, pos, Time.deltaTime * speed);
+				transform.position = Vector3.Lerp(transform.position, pos, 0.5f);
 			}
-		} 
+		}
 	}
 
 	public override void OnNetworkUpdate(PacketReader pr, int clientId) {

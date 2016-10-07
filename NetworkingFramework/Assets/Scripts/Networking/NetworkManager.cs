@@ -1,57 +1,51 @@
 ﻿using UnityEngine;
+using System;
 using System.Collections;
 using System.Collections.Generic;
-using System;
-using System.ComponentModel;
 
 public class NetworkManager : MonoBehaviour {
 
-	public Queue<Action> executionQueue = new Queue<Action>();
-
-	private void Update() {
-		lock (executionQueue) {
-			while (executionQueue.Count > 0) {
-				executionQueue.Dequeue().Invoke();
+	#region SINGLETON
+	// --------------- Singleton Pattern ---------------
+	private static NetworkManager instance;
+	public static NetworkManager _Instance
+	{
+		get
+		{
+			instance = FindObjectOfType<NetworkManager>();
+			if (instance == null) {
+				instance = new GameObject("NetworkManager").AddComponent<NetworkManager>();
 			}
+			return instance;
 		}
 	}
+	// --------------- Singleton Pattern ---------------
+	#endregion
 
-	public void Enqueue(IEnumerator action) {
-		lock (executionQueue) {
-			executionQueue.Enqueue(() => { StartCoroutine(action); });
-		}
-	}
+	public ExternalUnityMethodCaller _externalMethodCall { get; private set; }
 
-	public void Enqueue(Action action) {
-		Enqueue(ActionWrapper(action));
-	}
+	public delegate void OnNetworkUpdate(PacketReader pr, int clientID);
+	public OnNetworkUpdate onNetworkUpdate;
 
-	private IEnumerator ActionWrapper(Action action) {
-		action();
-		yield return null;
-	}
-
-	private static NetworkManager _instance = null;
-
-	public static bool Exists() {
-		return _instance != null;
-	}
-
-	public static NetworkManager Instance() {
-		if (!Exists ()) {
-			
-		}
-		return _instance;
-	}
+	private List<NetworkTransform> networkTransforms = new List<NetworkTransform>();
 
 	private void Awake() {
-		if (_instance == null) {
-			_instance = this;
-			DontDestroyOnLoad(gameObject);
-		}
+		_externalMethodCall = gameObject.AddComponent<ExternalUnityMethodCaller>();
 	}
 
-	private void OnDestroy() {
-		_instance = null;
+	// TODO: Add update interval for performance
+	public void UpdateNetworkTransforms(PacketReader pr, int clientID) {
+		onNetworkUpdate(pr, clientID);
+	}
+
+	public void AddPlayer(int clientID) {
+		GameObject newObj = (GameObject)Instantiate(Resources.Load("Player"), Vector3.zero, Quaternion.identity);
+		NetworkTransform nTransform = newObj.GetComponent<NetworkTransform>();
+		nTransform.SetupNetworkTransform(networkTransforms.Count, clientID);
+		networkTransforms.Add(nTransform);
+	}
+
+	public void RemovePlayer(int clientID) {
+		
 	}
 }
