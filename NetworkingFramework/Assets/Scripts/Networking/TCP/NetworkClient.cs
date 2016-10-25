@@ -114,7 +114,7 @@ namespace NetworkTCP {
 			// TODO: Add new player object
 			GameObject newObj = (GameObject)Instantiate(Resources.Load("Player"), Vector3.zero, Quaternion.identity);
 			NetworkTransform nTransform = newObj.GetComponent<NetworkTransform>();
-			nTransform.SetupNetworkTransform(networkTransforms.Count, id);
+			nTransform.SetupNetworkTransform(id);
 			networkTransforms.Add(nTransform);
 		}
 	}

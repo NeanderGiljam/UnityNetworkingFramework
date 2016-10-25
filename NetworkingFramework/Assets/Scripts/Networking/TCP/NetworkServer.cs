@@ -76,8 +76,8 @@ namespace NetworkTCP {
 		private void HandlePacket(byte[] data, Socket clientSocket) {
 			PacketReader pr = new PacketReader(data);
 			MessageType mt = (MessageType)pr.ReadUInt16();
-			int clientID = pr.ReadUInt16();
-			string clientName = pr.ReadString();
+			//int clientID = pr.ReadUInt16();
+			//string clientName = pr.ReadString();
 
 			switch (mt) {
 				case MessageType.Disconnect:

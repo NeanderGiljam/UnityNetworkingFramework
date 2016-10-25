@@ -1,11 +1,16 @@
 ﻿
 public enum MessageType : ushort {
+	None,
+
 	Connect, // Client side
 	Disconnect, // Client side
 	ConnectResponse, // Server side
 	UserConnected, // Server side
 	DisconnectResponse, // Server side
 	UserDisconnected, // Server side
+
+	GetPlayers,
+	GetPlayersResponse,
 
 	Position,
 	Rotation,

@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using System.Collections;
 using NetworkUDP;
 
 public class ClientController : MonoBehaviour {
@@ -25,20 +26,21 @@ public class ClientController : MonoBehaviour {
 			if (!int.TryParse(portString, out port)) {
 				port = 0;
 			}
-			if (GUI.Button(new Rect(10, 30, 120, 20), "Setup Client")) {
-				client.StartClient(ipAdress, port, clientName);
+			if (!client._connectionPending) {
+				if (GUI.Button(new Rect(10, 30, 120, 20), "Setup Client")) {
+					client.StartClient(ipAdress, port, clientName);
+				}
 			}
 		} else {
 			if (GUI.Button(new Rect(10, 10, 120, 20), "Disconnect")) {
-				client.SendData(PacketHandler.Create(MessageType.Disconnect, client._clientID, client._clientName), client._serverIpEndPoint);
+				client.SendData(PacketHandler.Create(MessageType.Disconnect, client._clientID), client._serverIpEndPoint);
 			}
 			GUI.Label(new Rect(10, 40, 80, 20), "Message:");
 			message = GUI.TextField(new Rect(10, 70, 120, 20), message);
 			if (GUI.Button(new Rect(10, 100, 120, 20), "Send Message")) {
-				client.SendData(PacketHandler.Create(MessageType.Text, client._clientID, client._clientName, message), client._serverIpEndPoint);
+				client.SendData(PacketHandler.Create(MessageType.Text, client._clientID, message), client._serverIpEndPoint);
 				message = "";
 			}
 		}
 	}
-
 }

@@ -7,18 +7,8 @@ public class NetworkManager : MonoBehaviour {
 
 	#region SINGLETON
 	// --------------- Singleton Pattern ---------------
-	private static NetworkManager instance;
-	public static NetworkManager _Instance
-	{
-		get
-		{
-			instance = FindObjectOfType<NetworkManager>();
-			if (instance == null) {
-				instance = new GameObject("NetworkManager").AddComponent<NetworkManager>();
-			}
-			return instance;
-		}
-	}
+	private static NetworkManager instance = null;
+	public static NetworkManager _Instance { get { return instance; } }
 	// --------------- Singleton Pattern ---------------
 	#endregion
 
@@ -27,9 +17,14 @@ public class NetworkManager : MonoBehaviour {
 	public delegate void OnNetworkUpdate(PacketReader pr, int clientID);
 	public OnNetworkUpdate onNetworkUpdate;
 
-	private List<NetworkTransform> networkTransforms = new List<NetworkTransform>();
+	private Dictionary<int, NetworkTransform> networkTransforms = new Dictionary<int, NetworkTransform>();
 
 	private void Awake() {
+		if (instance == null) {
+			instance = this;
+			DontDestroyOnLoad(gameObject);
+		}
+
 		_externalMethodCall = gameObject.AddComponent<ExternalUnityMethodCaller>();
 	}
 
@@ -39,13 +34,24 @@ public class NetworkManager : MonoBehaviour {
 	}
 
 	public void AddPlayer(int clientID) {
-		GameObject newObj = (GameObject)Instantiate(Resources.Load("Player"), Vector3.zero, Quaternion.identity);
-		NetworkTransform nTransform = newObj.GetComponent<NetworkTransform>();
-		nTransform.SetupNetworkTransform(networkTransforms.Count, clientID);
-		networkTransforms.Add(nTransform);
+		if (!ClientExists(clientID)) {
+			GameObject newObj = (GameObject)Instantiate(Resources.Load("Player"), Vector3.zero, Quaternion.identity);
+			newObj.name = "Player (" + clientID + ")";
+			NetworkTransform nTransform = newObj.GetComponent<NetworkTransform>();
+			nTransform.SetupNetworkTransform(clientID);
+			networkTransforms.Add(clientID, nTransform);
+		}
 	}
 
 	public void RemovePlayer(int clientID) {
 		
 	}
+
+	private bool ClientExists(int clientID) {
+		if (networkTransforms.ContainsKey(clientID)) {
+			Debug.LogWarning("Client with id: " + clientID + " already exists");
+			return true;
+		}
+		return false;
+	}	
 }

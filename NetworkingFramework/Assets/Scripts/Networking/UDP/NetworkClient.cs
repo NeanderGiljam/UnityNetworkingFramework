@@ -7,23 +7,28 @@ using System.Collections.Generic;
 namespace NetworkUDP {
 	public class NetworkClient : MonoBehaviour {
 
+		public bool _connectionPending { get; private set; }
 		public bool _connected { get; private set; }
 		public IPEndPoint _serverIpEndPoint { get; private set; }
 
 		public int _clientID { get; private set; }
 		public string _clientName { get; private set; }
 
-		private string serverIp = "127.0.0.1";
+		//private string serverIp = "127.0.0.1";
 		private int port = 6556;
 		private UdpClient client;
 
 		public void StartClient(string serverIp, int port, string clientName = "") {
+			_connectionPending = true;
+			// TODO: Start connection timeout timer timer
+
+			_clientID = 0;
+			_clientName = clientName;
+
 			_serverIpEndPoint = new IPEndPoint(IPAddress.Parse(serverIp), port);
 			client = new UdpClient(0);
 
-			_connected = true;
-
-			SendData(PacketHandler.Create(MessageType.Connect, -1, clientName), _serverIpEndPoint);
+			SendData(PacketHandler.Create(MessageType.Connect, _clientID), _serverIpEndPoint);
 
 			try {
 				client.BeginReceive(new AsyncCallback(ReceivedCallback), null);
@@ -45,7 +50,6 @@ namespace NetworkUDP {
 		private void ReceivedCallback(IAsyncResult result) {
 			IPEndPoint remoteIpEndPoint = new IPEndPoint(IPAddress.Any, port);
 			byte[] receivedData = client.EndReceive(result, ref remoteIpEndPoint);
-			//Debug.Log("Received data from: " + remoteIpEndPoint.Address + ":" + remoteIpEndPoint.Port);
 
 			client.BeginReceive(new AsyncCallback(ReceivedCallback), null);
 			HandlePacket(receivedData);
@@ -55,26 +59,45 @@ namespace NetworkUDP {
 			PacketReader pr = new PacketReader(data);
 			MessageType mt = (MessageType)pr.ReadUInt16();
 			int clientID = pr.ReadUInt16();
-			string clientName = pr.ReadString();
 
 			switch (mt) {
 				case MessageType.ConnectResponse:
+					_connected = true;
+					_connectionPending = false;
 					_clientID = clientID;
-					_clientName = clientName;
+
 					NetworkManager._Instance._externalMethodCall.Enqueue(() => NetworkManager._Instance.AddPlayer(_clientID));
 					Debug.Log("Received id: " + _clientID + " and my name is: " + _clientName);
+					SendData(PacketHandler.Create(MessageType.GetPlayers, _clientID), _serverIpEndPoint);
 					break;
 				case MessageType.DisconnectResponse:
 					_connected = false;
 					break;
 
 				case MessageType.UserConnected:
-					NetworkManager._Instance._externalMethodCall.Enqueue(() => NetworkManager._Instance.AddPlayer(clientID));
-					Debug.Log("Client with id: " + clientID + " and name: " + clientName + " joined the network.");
+					if (clientID != _clientID) {
+						NetworkManager._Instance._externalMethodCall.Enqueue(() => NetworkManager._Instance.AddPlayer(clientID));
+						Debug.Log("Client with id: " + clientID + " joined the network.");
+					}
 					break;
 				case MessageType.UserDisconnected:
 					NetworkManager._Instance._externalMethodCall.Enqueue(() => NetworkManager._Instance.RemovePlayer(clientID));
-					Debug.Log("Client with id: " + clientID + " and name: " + clientName + " disconnected.");
+					Debug.Log("Client with id: " + clientID + " disconnected.");
+					break;
+
+				case MessageType.GetPlayersResponse:
+					Debug.Log("Got players response");
+
+					int dataAmount = pr.ReadUInt16();
+					byte[] idData = pr.ReadBytes(dataAmount);
+					int[] playerIDs = idData.ToIntArray();
+
+					for (int i = 0; i < playerIDs.Length; i++) {
+						if (playerIDs[i] != _clientID) {
+							int id = playerIDs[i];
+							NetworkManager._Instance._externalMethodCall.Enqueue(() => NetworkManager._Instance.AddPlayer(id));
+						}
+					}
 					break;
 
 				case MessageType.Position:
@@ -91,5 +114,15 @@ namespace NetworkUDP {
 		private void OnApplicationQuit() {
 			client.Close();
 		}
+	}
+}
+
+public static class Extensions {
+	public static int[] ToIntArray(this byte[] intArrayData) {
+		int[] intArray = new int[intArrayData.Length / 4];
+		for (int i = 0; i < intArrayData.Length; i += 4) {
+			intArray[i / 4] = BitConverter.ToInt32(intArrayData, i);
+		}
+		return intArray;
 	}
 }

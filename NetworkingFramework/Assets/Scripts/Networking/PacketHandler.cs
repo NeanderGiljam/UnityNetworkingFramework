@@ -4,46 +4,50 @@ using System.IO;
 
 public static class PacketHandler {
 
-	public static byte[] Create(MessageType messageType, int sourceClientID, string sourceClientName) { // TODO: Change params so that there is less data to be send.
+	public static byte[] Create(MessageType messageType, int sourceClientID) { // TODO: Change params so that there is less data to be send.
 		PacketWriter pw = new PacketWriter();
 		pw.Write((ushort)messageType);
 		pw.Write((ushort)sourceClientID);
-		pw.Write(sourceClientName);
 
 		return pw.GetBytes();
 	}
-	public static byte[] Create(MessageType messageType, int sourceClientID, string sourceClientName, byte[] data) {
+	public static byte[] Create(MessageType messageType, int sourceClientID, int dataCount, byte[] data) {
 		PacketWriter pw = new PacketWriter();
 		pw.Write((ushort)messageType);
 		pw.Write((ushort)sourceClientID);
-		pw.Write(sourceClientName);
+		pw.Write((ushort)dataCount);
 		pw.Write(data);
 
 		return pw.GetBytes();
 	}
-	public static byte[] Create(MessageType messageType, int sourceClientID, string sourceClientName, string text) {
+	public static byte[] Create(MessageType messageType, int sourceClientID, ushort amount) {
 		PacketWriter pw = new PacketWriter();
 		pw.Write((ushort)messageType);
 		pw.Write((ushort)sourceClientID);
-		pw.Write(sourceClientName);
+		pw.Write(amount);
+
+		return pw.GetBytes();
+	}
+	public static byte[] Create(MessageType messageType, int sourceClientID, string text) {
+		PacketWriter pw = new PacketWriter();
+		pw.Write((ushort)messageType);
+		pw.Write((ushort)sourceClientID);
 		pw.Write(text);
 
 		return pw.GetBytes();
 	}
-	public static byte[] Create(MessageType messageType, int sourceClientID, string sourceClientName, Vector2 vector) {
+	public static byte[] Create(MessageType messageType, int sourceClientID, Vector2 vector) {
 		PacketWriter pw = new PacketWriter();
 		pw.Write((ushort)messageType);
 		pw.Write((ushort)sourceClientID);
-		pw.Write(sourceClientName);
 		pw.Write(vector);
 
 		return pw.GetBytes();
 	}
-	public static byte[] Create(MessageType messageType, int sourceClientID, string sourceClientName, Vector3 vector) {
+	public static byte[] Create(MessageType messageType, int sourceClientID, Vector3 vector) {
 		PacketWriter pw = new PacketWriter();
 		pw.Write((ushort)messageType);
 		pw.Write((ushort)sourceClientID);
-		pw.Write(sourceClientName);
 		pw.Write(vector);
 
 		return pw.GetBytes();

@@ -3,14 +3,18 @@ using System;
 using System.Net;
 using System.Net.Sockets;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace NetworkUDP {
 	public class NetworkServer : MonoBehaviour {
 
+		// TODO: Create max connections amount
+
 		private int port = 6556;
 		private UdpClient server;
 
-		private Dictionary<IPEndPoint, ClientData> clients = new Dictionary<IPEndPoint, ClientData>();
+		//private List<IPEndPoint> clients = new List<IPEndPoint>();
+		private Dictionary<IPEndPoint, int> clients = new Dictionary<IPEndPoint, int>();
 
 		private void Awake() {
 			StartServer(port);
@@ -31,7 +35,7 @@ namespace NetworkUDP {
 		private void ReceivedCallback(IAsyncResult result) {
 			IPEndPoint remoteIpEndPoint = new IPEndPoint(IPAddress.Any, port);
 			byte[] receivedData = server.EndReceive(result, ref remoteIpEndPoint); // Outputs the ipEndpointData of the client who send it
-			
+
 			server.BeginReceive(new AsyncCallback(ReceivedCallback), null);
 
 			HandlePacket(receivedData, remoteIpEndPoint);
@@ -41,38 +45,56 @@ namespace NetworkUDP {
 			PacketReader pr = new PacketReader(data);
 			MessageType mt = (MessageType)pr.ReadUInt16();
 			int clientID = pr.ReadUInt16();
-			string clientName = pr.ReadString();
 
 			switch (mt) {
 				case MessageType.Connect:
-					ClientData clientData = ConnectNewClient(remoteIpEndPoint, clientName);
-					if (clientData != null) {
-						clients.Add(remoteIpEndPoint, clientData);
-						SendData(PacketHandler.Create(MessageType.ConnectResponse, clientData.clientID, clientData.clientName), remoteIpEndPoint);
-						Debug.Log("New client connected. Client count: " + clients.Count);
+					if (!ClientAlreadyConnected(remoteIpEndPoint)) {
+						int newClientID = clients.Count;
+						clients.Add(remoteIpEndPoint, newClientID);
+						SendData(PacketHandler.Create(MessageType.ConnectResponse, newClientID), remoteIpEndPoint);
 						// TODO: Broadcast that a new client connected
-						BroadcastMessage(PacketHandler.Create(MessageType.UserConnected, clientData.clientID, clientData.clientName), remoteIpEndPoint);
+						BroadcastMessage(PacketHandler.Create(MessageType.UserConnected, newClientID), remoteIpEndPoint);
+						Debug.Log("Player connected: " + newClientID + ", broadcasting to all connected clients: " + (clients.Count - 1));
 					}
 					break;
 				case MessageType.Disconnect:
 					bool disconnected = DisconnectClient(remoteIpEndPoint);
 					if (disconnected) {
-						SendData(PacketHandler.Create(MessageType.DisconnectResponse, clientID, clientName), remoteIpEndPoint);
-						BroadcastMessage(PacketHandler.Create(MessageType.UserDisconnected, clientID, clientName), remoteIpEndPoint);
+						SendData(PacketHandler.Create(MessageType.DisconnectResponse, clientID), remoteIpEndPoint);
+						BroadcastMessage(PacketHandler.Create(MessageType.UserDisconnected, clientID), remoteIpEndPoint);
 					}
+
+					Debug.Log("Player disconnected: " + clientID);
+					break;
+
+				case MessageType.GetPlayers:
+					byte[] playerIDs = new byte[clients.Values.Count * sizeof(int)];
+					Buffer.BlockCopy(clients.Values.ToArray(), 0, playerIDs, 0, playerIDs.Length);
+
+					SendData(PacketHandler.Create(MessageType.GetPlayersResponse, clientID, playerIDs.Length, playerIDs), remoteIpEndPoint);
+
+					Debug.Log("Send get players response.");
+					break;
+
+				case MessageType.Position:
+					BroadcastMessage(data, remoteIpEndPoint);
 					break;
 				default:
 					// Broadcast message to all clients
 					if (mt == MessageType.Text) { // TODO: Remove this is test
 						string message = pr.ReadString();
-						Debug.Log("Message received on server: " + message + ", from client: " + clientID + " aka: " + clientName);
+						Debug.Log("Message received on server: " + message + ", from client: " + clientID);
 					}
 					break;
 			}
 		}
 
 		private void BroadcastMessage(byte[] message, IPEndPoint sender) {
-			
+			foreach (KeyValuePair<IPEndPoint, int> p in clients) {
+				if (p.Key != sender) {
+					SendData(message, p.Key);
+				}
+			}
 		}
 
 		private bool SendData(byte[] packetData, IPEndPoint toIpEndPoint) {
@@ -89,33 +111,33 @@ namespace NetworkUDP {
 			server.Close();
 		}
 
-		private ClientData ConnectNewClient(IPEndPoint clientIpEndpoint, string clientName) {
-			if (!clients.ContainsKey(clientIpEndpoint)) {
-				return new ClientData(clients.Count, clientName, clientIpEndpoint);
-			}
-			return null;
-		}
-
-		private bool DisconnectClient(IPEndPoint clientIpEndpoint) {
-			if (clients.ContainsKey(clientIpEndpoint)) {
-				clients.Remove(clientIpEndpoint);
-				return true;
+		private bool ClientAlreadyConnected(IPEndPoint clientIpEndpoint) {
+			foreach (KeyValuePair<IPEndPoint, int> p in clients) {
+				if (p.Key.Port == clientIpEndpoint.Port) {
+					if (p.Key.Address == clientIpEndpoint.Address) {
+						Debug.Log("Client already connected");
+						return true;
+					}
+				}
 			}
 			return false;
 		}
-	}
 
-	public class ClientData {
+		private bool DisconnectClient(IPEndPoint clientIpEndpoint) {
+			int i = clients.Count;
 
-		public int clientID; // Assigned by server
-		public string clientName; // Assigned by user
-		public IPEndPoint clientIpEndpoint;
+			while (i-- >= 0) {
+				if (clients.ContainsKey(clientIpEndpoint)) {
+					clients.Remove(clientIpEndpoint);
+					return true;
+				}
+			}
 
-		public ClientData(int clientID, string clientName, IPEndPoint clientIpEndpoint) {
-			this.clientID = clientID;
-			this.clientName = clientName;
-			this.clientIpEndpoint = clientIpEndpoint;
+			//if (clients.ContainsValue(clientIpEndpoint)) {
+			//	clients.Remove(clientIpEndpoint);
+			//	return true;
+			//}
+			return false;
 		}
-
 	}
 }
